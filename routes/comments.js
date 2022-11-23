@@ -1,11 +1,11 @@
 const express = require('express')
 const router = express.Router()
-const Comment = require('../schemas/commentSchema')
+const Post = require('../schemas/postSchema')
 
-const getPost = async (req, res, next) => {
+const getComent = async (req, res, next) => {
     let comment;
     try{
-        comment = await Comment.findById(req.params.id)
+        comment = await Post.findOne({"comments._id": req.params.id})
         if( comment === null) res.status(400).json({message: 'comment not found'})
     } catch (err) {
         res.status(500).json({ message: err.message})
@@ -14,53 +14,78 @@ const getPost = async (req, res, next) => {
     next()
 }
 
-router.get('/', async (req, res) => {
+router.get('/:id', async (req, res) => {
+    const id = req.params.id;
+    const post = await Post.findById(id)
     try{
-        const posts = await Comment.find()
-        res.json(posts)
+        if(!post) res.status(404).json({message: 'Error 404! Post Not Found'})
+        res.status(200).json(post.comments)
     } catch (err) {
-        res.status(500).json({ message: err.message})
+        res.status(400).json({error: err.message})
     }
 })
 
-router.get('/:id', getPost, (req, res) => {
-    res.json(res.comment)
-})
-
-router.post('/', async (req, res) => {
-    const comment = new Comment({
-        name: req.body.name,
-        comment: req.body.comment
+router.post('/:id', async (req, res) => {
+    const id = req.params.id;
+    const post = await Post.findByIdAndUpdate(id, {
+        $addToSet: {
+            comments: [
+                {
+                    name: req.body.name,
+                    comment: req.body.comment
+                },
+            ],
+        },
     })
-    try {
-        const newComment = await comment.save()
-        res.status(201).json(newComment)
-    } catch(err) {
-        res.status(400).json({message: err.message})
+    try{
+        if(!post) res.status(404).json({message: 'Error 404! Post not found'})
+        res.status(201).json({message: 'new comment successfully created'})
+    } catch (err) {
+        res.status(409).json({error: err.message});
     }
 })
 
-router.delete('/:id', getPost, async (req, res) => {
+// router.delete('/:id', getComent, async (req, res) => {
+//     const id = req.params.id
+//     try{
+//         res.comment.comments = res.comment.comments.filter((el) => el._id != id)
+//         // const newComment = await res.comment.save()
+//         console.log(res.comment)
+//         // res.json(newComment)
+//     } catch (err) {
+//         res.json({error: err.message})
+//     }
+// })
+
+router.delete('/:id', async (req, res) => {
+    const id = req.params.id
+    const selectedPost = await Post.findOne({ "comments._id": id })
+    if( selectedPost === null) res.status(400).json({message: 'post not found'})
     try{
-        await res.comment.remove()
-        res.json({message: 'successful delete comment!'})
+        let comment = selectedPost.comments.id(id);
+        
+        const newComment = selectedPost.comments.filter(el => el._id !== comment._id)
+        selectedPost.comments = newComment
+        selectedPost.save();
+        res.status(201).json({message: "Comment deleted successfuly."});
     } catch (err) {
-        res.status(500).json({message: err.message})
+        res.status(409).json({ error: err.message });
     }
 })
-
-router.put('/:id', getPost, async (req, res) => {
-    if(req.body.name != null){
-        res.comment.name = req.body.name
-    }
-    if(req.body.comment != null){
-        res.comment.comment = req.body.comment
-    }
+router.put('/:id', async (req, res) => {
+    const id = req.params.id
+    const selectedPost = await Post.findOne({ "comments._id": id })
+    if( selectedPost === null) res.status(400).json({message: 'post not found'})
     try{
-        const updatedPost = await res.comment.save()
-        res.json(updatedPost)
+        let comment = selectedPost.comments.id(id);
+        
+        comment.name = req.body.name
+        comment.comment = req.body.comment
+    
+        selectedPost.save();
+        res.status(201).json({message: "Comment updated successfuly."});
     } catch (err) {
-        res.status(400).json({message: err.message})
+        res.status(409).json({ error: err.message });
     }
 })
 

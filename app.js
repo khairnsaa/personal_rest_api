@@ -8,5 +8,5 @@ connect()
 app.listen(3000, () => console.log(`sever live at "http://localhost:3000"`))
 
 app.use(express.json());
-app.use('/api/comment', commentRouter)
+app.use('/api/comments', commentRouter)
 app.use('/api/post', postRouter)
