@@ -2,7 +2,7 @@ require('dotenv').config()
 const mongoose = require('mongoose')
 
 const connect = () => {
-    mongoose.connect(process.env.DATABASE_URL, {useNewURLParser: true}).catch(err => console.log(err))
+    mongoose.connect('mongodb://localhost:27017/nisaas_voyage_blog', {useNewURLParser: true}).catch(err => console.log(err))
 
     const db = mongoose.connection
     db.on('error', (err) => console.log(err))
